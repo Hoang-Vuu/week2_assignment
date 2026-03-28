@@ -2,34 +2,33 @@ pipeline {
     agent any
 
     tools {
-        // Maven tool name (must match Global Tool Configuration)
-        maven 'maven3'
+        maven 'maven3'       // tên Maven tool bạn đã cấu hình
     }
 
     environment {
-        DOCKERHUB = credentials('dockerhub')
         IMAGE_NAME = "hoangvudang206/shoppingcart"
+        IMAGE_TAG = "latest"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                echo "Checking out repository..."
-                checkout scm
+                echo "Pulling source code..."
+                git branch: 'main', url: 'https://github.com/Hoang-Vuu/week2_assignment.git'
             }
         }
 
         stage('Build with Maven') {
             steps {
-                echo "Building project with Jenkins Maven tool..."
+                echo "Running mvn clean package..."
                 bat "\"${MAVEN_HOME}\\bin\\mvn\" clean package -DskipTests"
             }
         }
 
         stage('Run Unit Tests') {
             steps {
-                echo "Running unit tests..."
+                echo "Running mvn test..."
                 bat "\"${MAVEN_HOME}\\bin\\mvn\" test"
             }
         }
@@ -37,33 +36,39 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                bat "docker build -t %IMAGE_NAME%:latest ."
+                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
             }
         }
 
         stage('Docker Login') {
             steps {
                 echo "Logging into Docker Hub..."
-                bat """
-                echo ${DOCKERHUB_PSW} | docker login -u ${DOCKERHUB_USR} --password-stdin
-                """
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    """
+                }
             }
         }
 
         stage('Push Docker Image') {
             steps {
                 echo "Pushing Docker image to Docker Hub..."
-                bat "docker push %IMAGE_NAME%:latest"
+                bat "docker push %IMAGE_NAME%:%IMAGE_TAG%"
             }
         }
     }
 
     post {
+        always {
+            junit(testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true)
+            recordCoverage tools: [[parser: 'JACOCO']]
+        }
         success {
-            echo "🎉 Pipeline completed successfully!"
+            echo "🎉 PIPELINE SUCCESS: Build + Test + Docker Push completed!"
         }
         failure {
-            echo "❌ Pipeline failed. Please check logs."
+            echo "❌ PIPELINE FAILED — Check logs."
         }
     }
 }
