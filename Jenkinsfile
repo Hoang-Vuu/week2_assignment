@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         // Maven tool name (must match Global Tool Configuration)
-        maven 'maven'
+        maven 'maven3'
     }
 
     environment {
