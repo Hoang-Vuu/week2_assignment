@@ -11,7 +11,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 echo "Pulling source code..."
@@ -37,17 +36,6 @@ pipeline {
             steps {
                 echo "Building Docker image..."
                 bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                echo "Logging into Docker Hub..."
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat """
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    """
-                }
             }
         }
 
