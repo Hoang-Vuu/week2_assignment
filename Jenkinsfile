@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    tools {
+        // Maven tool name (must match Global Tool Configuration)
+        maven 'maven'
+    }
+
     environment {
         DOCKERHUB = credentials('dockerhub')
         IMAGE_NAME = "hoangvudang206/shoppingcart"
@@ -8,24 +13,24 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                echo "Checking out source code..."
+                echo "Checking out repository..."
                 checkout scm
             }
         }
 
-        stage('Build Maven') {
+        stage('Build with Maven') {
             steps {
-                echo "Building project with Maven..."
-                bat "mvn clean package -DskipTests"
+                echo "Building project with Jenkins Maven tool..."
+                bat "\"${MAVEN_HOME}\\bin\\mvn\" clean package -DskipTests"
             }
         }
 
         stage('Run Unit Tests') {
             steps {
-                echo "Running tests..."
-                bat "mvn test"
+                echo "Running unit tests..."
+                bat "\"${MAVEN_HOME}\\bin\\mvn\" test"
             }
         }
 
@@ -38,7 +43,7 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                echo "Logging into Docker Hub…"
+                echo "Logging into Docker Hub..."
                 bat """
                 echo ${DOCKERHUB_PSW} | docker login -u ${DOCKERHUB_USR} --password-stdin
                 """
@@ -47,7 +52,7 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                echo "Pushing image to Docker Hub..."
+                echo "Pushing Docker image to Docker Hub..."
                 bat "docker push %IMAGE_NAME%:latest"
             }
         }
@@ -55,10 +60,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed successfully!"
+            echo "🎉 Pipeline completed successfully!"
         }
         failure {
-            echo "Pipeline failed. Please check logs."
+            echo "❌ Pipeline failed. Please check logs."
         }
     }
 }
